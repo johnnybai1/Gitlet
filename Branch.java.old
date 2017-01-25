@@ -1,0 +1,62 @@
+import java.io.*;
+import java.util.LinkedList;
+
+/**
+ * Structure our commits as such
+ * ~/Branch-name/commit files
+ * Branch will know the ordering of commits
+ * Most recent commit of any particular branch will be at the front of the list
+ */
+public class Branch implements Serializable {
+
+    private LinkedList<String> commits;
+    private String branchName;
+    private Commit branchParent;
+
+    public Branch(String branchName, Commit branchParent) {
+        this.branchName = branchName;
+        this.branchParent = branchParent;
+        commits = new LinkedList<>();
+        File branchDir = new File("./.gitlet/" + branchName);
+        branchDir.mkdir();
+    }
+
+    public void addCommit(Commit node) {
+        commits.addFirst(node.getCommitID());
+    }
+
+    public String getBranchHead() {
+        return commits.getFirst();
+    }
+
+    public static Branch loadBranch(String branch) {
+        Branch myBranch = null;
+        File branchFile = new File(".gitlet/" + branch + "/" + branch + ".ser");
+        if (branchFile.exists()) {
+            try {
+                FileInputStream fis = new FileInputStream(branchFile);
+                ObjectInputStream ois = new ObjectInputStream(fis);
+                myBranch = (Branch) ois.readObject();
+            }
+            catch (IOException e) {
+                System.out.println("IOException in loadBranch() " + e);
+            }
+            catch (ClassNotFoundException e) {
+                System.out.println("ClassNotFoundException in loadBranch() " + e);;
+            }
+        }
+        return myBranch;
+    }
+
+    public void saveBranch() {
+        try {
+            File stageFile = new File(".gitlet/" + branchName + "/" + branchName + ".ser");
+            FileOutputStream fos = new FileOutputStream(stageFile);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(this);
+        }
+        catch (IOException e) {
+            System.out.println("Error saving Branch " + e);
+        }
+    }
+}

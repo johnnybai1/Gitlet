@@ -1,0 +1,123 @@
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Set;
+
+/**
+ * Our stage is a HashMap<filename, toAdd>
+ * Working directory is /Gitlet/
+ * File(filename) is the file /Gitlet/file
+ */
+
+public class Stage implements Serializable {
+
+    public static void main(String[] args) {
+    }
+
+    private static final HashMap<File, Boolean> stage = new HashMap<>();
+
+    public void markAdd(Commit head, String filename) {
+        File file = new File(filename);
+        if (!file.exists()) {
+            System.out.println("File does not exist.");
+            return;
+        }
+        if (!wasModified(head, filename)) {
+            System.out.println();
+            return;
+        }
+        stage.put(file, true);
+
+    }
+
+    public void markRemove(String filename, Commit head) {
+
+    }
+
+    public boolean getAddFlag(File file) {
+        return stage.get(file);
+    }
+
+    public Set<File> getKeys() {
+        return stage.keySet();
+    }
+
+    public void clear() {
+        stage.clear();
+    }
+
+    public boolean isEmpty() {
+        return stage.isEmpty();
+    }
+
+    /**
+     * The Commit parameter to be used in this method must be loaded from the correct Commit.ser file. The file we want
+     * to load from will be located in current branch's commit head (most recent commit)
+     * @param head the commit structure we want
+     * @param filename the name of the file in the working directory /Gitlet
+     * @return true if current file has a different last modified attribute than the file in the last commit
+     */
+    private static boolean wasModified(Commit head, String filename) {
+        Path currentFile = Paths.get(filename);
+        Path commitFile = Paths.get(".gitlet/" + head.getFileID(filenamex));
+        return false;
+    }
+
+    /*
+    private boolean wasModified(Commit node, String file) {
+        try {
+            Path liveFile = Paths.get(file);
+            Path commitFile = Paths.get(".gitlet/" + node.getFileID(file));
+            if (!commitFile.toFile().exists()) {
+                return true;
+            }
+            if (Files.getLastModifiedTime(liveFile).equals(Files.getLastModifiedTime(commitFile))) {
+                return false;
+            }
+            else return true;
+        }
+        catch (IOException e) {
+            System.out.println("Could not obtain last modified attribute: " + e);
+        }
+        return false;
+    }
+    */
+
+    public static Stage loadStage() {
+        Stage myStage = null;
+        File stageFile = new File(".gitlet/stage.ser");
+        if (stageFile.exists()) {
+            try {
+                FileInputStream fis = new FileInputStream(stageFile);
+                ObjectInputStream ois = new ObjectInputStream(fis);
+                myStage = (Stage) ois.readObject();
+            }
+            catch (IOException e) {
+                System.out.println("IOException in loadStage() " + e);
+            }
+            catch (ClassNotFoundException e) {
+                System.out.println("ClassNotFoundException in loadStage() " + e);;
+            }
+        }
+        return myStage;
+    }
+
+    public static void saveStage(Stage myStage) {
+        if (myStage == null) {
+            return;
+        }
+        try {
+            File stageFile = new File(".gitlet/stage.ser");
+            FileOutputStream fos = new FileOutputStream(stageFile);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(myStage);
+        }
+        catch (IOException e) {
+            System.out.println("Error saving stage " + e);
+        }
+    }
+
+
+}

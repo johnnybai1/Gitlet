@@ -1,0 +1,137 @@
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.UUID;
+import java.util.Date;
+
+/**
+ * Every commit contains a record of what the current working directory looks like. A HashMap will be used to store
+ * pointers to our actual files. The Key will be the file name, the Value will be the correct copy of the file in our
+ * .gitlet folder. The most recent commit will have no children nodes. The branch of a current tree can be known by
+ * following up on parents.
+ *
+ * Assign each file committed with a new UUID/hashCode/ID of some sort. Perhaps a mix of both.
+ * FileID = "filename.code()" + "-" + commitID
+ *
+ * Merge: current head knows specified branch head's files. updated as such. No modification of the tree is necessary.
+ * CommitTree manages and maintains our Commits and how they are linked
+ *
+ * Have something to always point to current branch
+ * Have something to always point to most recent Commit
+ * A new branch is created when you checkout an earlier vei
+ * Have something pointing to current commit (What our live directory should look like)
+ *
+ */
+
+public class Commit implements Serializable {
+
+    private String commitID;
+    private String commitMessage;
+    private String creationTime;
+    private static final HashMap<String, String> nameToID = new HashMap<String, String>();
+
+    public Commit(String message) {
+        commitID = UUID.randomUUID().toString();
+        commitMessage = message;
+        setCreationTime();
+    }
+
+    public String getCommitID() {
+        return commitID;
+    }
+
+    public String getCommitMessage() {
+        return commitMessage;
+    }
+
+    public String getCreationTime(){
+        return creationTime;
+    }
+
+    public String getFileID(String filename) {
+        return nameToID.get(filename);
+    }
+
+    public File getCommitFile(String filename, String branch){
+        String fileID = nameToID.get(filename);
+        return new File("./gitlet/" + branch + "/" + fileID);
+    }
+
+    public void commitStage(Stage stage, String branch) {
+        for (File file : stage.getKeys()) {
+            if (stage.getAddFlag(file)) {
+                addFile(file, branch);
+            }
+            else removeFile(file);
+        }
+        stage.clear();
+    }
+
+    private void addFile(File file, String branch) {
+        String fileName = file.getName();
+        String fileID = UUID.randomUUID().toString();
+        try {
+            copyFileToBranch(fileName, fileID, branch);
+            nameToID.put(fileName, fileID);
+        }
+        catch (IOException e) {
+            System.out.println("Failed to commit " + file + " : " + e);
+        }
+    }
+
+    private void removeFile(File file) {
+        nameToID.remove(file.getName());
+    }
+
+    /**
+     * Makes a copy of the /Gitlet/filename.ext File and saves it as /Gitlet/.gitlet/branch/fileID.ext
+     */
+    private static void copyFileToBranch(String filename, String fileID, String branch) throws IOException {
+        Path srcPath = Paths.get(filename);
+        Path destPath = Paths.get(".gitlet/" + "branch/" + fileID);
+        Files.copy(srcPath, destPath, StandardCopyOption.REPLACE_EXISTING);
+        Files.setLastModifiedTime(destPath, Files.getLastModifiedTime(srcPath));
+    }
+
+    private void setCreationTime() {
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        creationTime = sdf.format(now);
+    }
+
+    public static Commit loadCommit(String commitID, String branch) {
+        Commit myCommit = null;
+        File branchFile = new File(".gitlet/" + branch + "/" + commitID + ".ser");
+        if (branchFile.exists()) {
+            try {
+                FileInputStream fis = new FileInputStream(branchFile);
+                ObjectInputStream ois = new ObjectInputStream(fis);
+                myCommit = (Commit) ois.readObject();
+            }
+            catch (IOException e) {
+                System.out.println("IOException in loadCommit() " + e);
+            }
+            catch (ClassNotFoundException e) {
+                System.out.println("ClassNotFoundException in loadCommit() " + e);;
+            }
+        }
+        return myCommit;
+    }
+
+    public void saveCommit(String branch) {
+        try {
+            File stageFile = new File(".gitlet/" + branch + "/" + commitID + ".ser");
+            FileOutputStream fos = new FileOutputStream(stageFile);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(this);
+        }
+        catch (IOException e) {
+            System.out.println("Error saving Commit " + e);
+        }
+    }
+
+}
